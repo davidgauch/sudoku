@@ -1,13 +1,13 @@
 use std::{
-    fmt::{Display, Formatter},
+    fmt::{Debug, Formatter},
     num::NonZeroU8,
 };
 const WIDTH: usize = 9;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Board([[Option<NonZeroU8>; WIDTH]; WIDTH]);
 
-impl Display for Board {
+impl Debug for Board {
     #[rustfmt::skip]
     fn fmt(&self, formatter: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         let c: [[char; WIDTH]; WIDTH] = self
@@ -15,7 +15,7 @@ impl Display for Board {
             .map(|r| r.map(|u| char::from(u.map_or(b' ', |b| b.get() + b'0'))));
 
         formatter.write_fmt(format_args!(
-            "\
+            "\n\
             {} {} {} | {} {} {} | {} {} {}\n\
             {} {} {} | {} {} {} | {} {} {}\n\
             {} {} {} | {} {} {} | {} {} {}\n\
@@ -106,10 +106,10 @@ fn main() -> anyhow::Result<()> {
         board.0[i / WIDTH][i % WIDTH] = NonZeroU8::new(byte - b'0');
     }
 
-    println!("{board}");
+    println!("{board:?}");
 
     board.solve()?;
-    println!("{board}");
+    println!("{board:?}");
 
     Ok(())
 }
@@ -119,25 +119,38 @@ mod test {
     use crate::Board;
     use std::num::NonZeroU8;
 
-    fn get_board() -> Board {
-        std::hint::black_box(Board(
-            [
-                [8, 0, 9, 3, 0, 0, 0, 0, 0],
-                [7, 0, 0, 0, 5, 0, 0, 0, 0],
-                [0, 1, 3, 7, 0, 8, 0, 9, 0],
-                [2, 0, 0, 0, 0, 0, 0, 3, 0],
-                [0, 0, 1, 0, 0, 0, 2, 0, 0],
-                [0, 4, 0, 0, 0, 0, 0, 0, 8],
-                [0, 5, 0, 8, 0, 9, 7, 6, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0, 3],
-                [0, 0, 0, 0, 0, 6, 8, 0, 1],
-            ]
-            .map(|r| r.map(NonZeroU8::new)),
-        ))
-    }
+    const BOARD: Board = Board(unsafe {
+        std::mem::transmute::<[[u8; 9]; 9], _>([
+            [8, 0, 9, 3, 0, 0, 0, 0, 0],
+            [7, 0, 0, 0, 5, 0, 0, 0, 0],
+            [0, 1, 3, 7, 0, 8, 0, 9, 0],
+            [2, 0, 0, 0, 0, 0, 0, 3, 0],
+            [0, 0, 1, 0, 0, 0, 2, 0, 0],
+            [0, 4, 0, 0, 0, 0, 0, 0, 8],
+            [0, 5, 0, 8, 0, 9, 7, 6, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 3],
+            [0, 0, 0, 0, 0, 6, 8, 0, 1],
+        ])
+    });
+
+    const SOLUTION: [[Option<NonZeroU8>; 9]; 9] = unsafe {
+        std::mem::transmute::<[[u8; 9]; 9], _>([
+            [8, 6, 9, 3, 4, 2, 5, 1, 7],
+            [7, 2, 4, 9, 5, 1, 3, 8, 6],
+            [5, 1, 3, 7, 6, 8, 4, 9, 2],
+            [2, 9, 8, 1, 7, 4, 6, 3, 5],
+            [3, 7, 1, 6, 8, 5, 2, 4, 9],
+            [6, 4, 5, 2, 9, 3, 1, 7, 8],
+            [1, 5, 2, 8, 3, 9, 7, 6, 4],
+            [4, 8, 6, 5, 1, 7, 9, 2, 3],
+            [9, 3, 7, 4, 2, 6, 8, 5, 1],
+        ])
+    };
 
     #[test]
     fn test_solve() {
-        get_board().solve().unwrap();
+        let mut board = std::hint::black_box(BOARD.to_owned());
+        board.solve().unwrap();
+        assert_eq!(board.0, SOLUTION);
     }
 }
