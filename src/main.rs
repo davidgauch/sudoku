@@ -100,6 +100,7 @@ fn main() -> anyhow::Result<()> {
     let mut board = Board::default();
     for (i, byte) in std::fs::read("sudoku.txt")?
         .into_iter()
+        .filter(|&b| b >= b'0' && b <= b'9')
         .take(WIDTH * WIDTH)
         .enumerate()
     {
